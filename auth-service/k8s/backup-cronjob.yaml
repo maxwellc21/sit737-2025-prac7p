@@ -1,0 +1,31 @@
+# backup-cronjob.yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mongo-backup
+  namespace: edugo-auth
+spec:
+  schedule: "0 2 * * *" # every day at 02:00
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: mongodump
+              image: mongo:5.0
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  mongodump \
+                    --uri="mongodb://authuser:authpass@mongo-standalone:27017/authdb?authSource=admin" \
+                    --archive=/backups/authdb_$(date +%Y%m%d_%H%M%S).gz \
+                    --gzip
+              volumeMounts:
+                - name: backup
+                  mountPath: /backups
+          restartPolicy: OnFailure
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: mongo-backup-pvc
